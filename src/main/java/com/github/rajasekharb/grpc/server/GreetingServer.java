@@ -1,11 +1,13 @@
 package com.github.rajasekharb.grpc.server;
 
+import com.github.rajasekharb.grpc.service.GreetingServiceImpl;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 import java.io.IOException;
 
 public class GreetingServer {
+
     public static void main(String[] args) throws IOException, InterruptedException {
         System.out.println("Hello gRPC");
 

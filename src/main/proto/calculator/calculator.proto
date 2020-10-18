@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package calculator;
+
+option java_package = "com.proto.calculator";
+option java_multiple_files = true;
+
+message Message {
+  int32 first_number = 1;
+  int32 second_number = 2;
+}
+
+message PrimeFactorizationMessage {
+  int32 number = 1;
+}
+
+message CalculatorRequest {
+  Message message = 1;
+}
+
+message CalculatorResponse {
+  int32 response = 1;
+}
+
+message PrimeFactorizationRequest {
+  PrimeFactorizationMessage message = 1;
+}
+
+message PrimeFactorizationResponse {
+  int32 response = 1;
+}
+
+service CalculatorService {
+  rpc Calculate(CalculatorRequest) returns (CalculatorResponse) {};
+
+  rpc PrimeFactorization(PrimeFactorizationRequest) returns (stream PrimeFactorizationResponse) {};
+}
+
+
+
