@@ -72,7 +72,6 @@ public class GreetingServiceImpl extends GreetServiceGrpc.GreetServiceImplBase {
             public void onNext(GreetEveryoneRequest value) {
                 String result = "Hello " + value.getGreeting().getFirstName() + "!";
                 responseObserver.onNext(GreetEveryoneResponse.newBuilder().setResult(result).build());
-                System.out.println("-------------Sent a response to the client-------------");
             }
 
             @Override

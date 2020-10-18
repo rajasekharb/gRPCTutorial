@@ -34,6 +34,7 @@ public class GreetingClient {
         channel.shutdown();
     }
 
+    //Bidirectional streaming
     private void greetEveryone(ManagedChannel channel, Greeting greeting) {
         CountDownLatch latch = new CountDownLatch(1);
         GreetServiceGrpc.GreetServiceStub stub = GreetServiceGrpc.newStub(channel);
@@ -59,8 +60,16 @@ public class GreetingClient {
         });
 
         //Send GreetEveryoneRequest as many times as you want here
-        Arrays.asList("Rajasekhar", "Rajesh", "Phoenix").forEach((name) -> greetEveryoneRequestStreamObserver
-                .onNext(GreetEveryoneRequest.newBuilder().setGreeting(Greeting.newBuilder().setFirstName(name).build()).build()));
+        Arrays.asList("Rajasekhar", "Rajesh", "Phoenix").forEach((name) -> {
+            System.out.println("Sending " + name);
+            greetEveryoneRequestStreamObserver
+                    .onNext(GreetEveryoneRequest.newBuilder().setGreeting(Greeting.newBuilder().setFirstName(name).build()).build());
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
 
         //Send the message to server that you are done sending the data
         greetEveryoneRequestStreamObserver.onCompleted();
@@ -71,6 +80,7 @@ public class GreetingClient {
         }
     }
 
+    //Client streaming
     private void longGreet(ManagedChannel channel, Greeting greeting) {
         CountDownLatch latch = new CountDownLatch(1);
 
