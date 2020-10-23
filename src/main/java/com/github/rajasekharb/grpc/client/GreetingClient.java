@@ -6,8 +6,10 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class GreetingClient {
 
@@ -24,11 +26,11 @@ public class GreetingClient {
         //Created a protocol buffer greeting message
         Greeting greeting = Greeting.newBuilder().setFirstName("Rajasekhar").setLastName("Bhupasamudram").build();
 
-        //greet(channel, greeting);
+        greet(channel, greeting);
         //greetManyTimes(channel, greeting);
 
         //longGreet(channel, greeting);
-        greetEveryone(channel, greeting);
+        //greetEveryone(channel, greeting);
 
         System.out.println("Shutting down channel");
         channel.shutdown();
@@ -74,7 +76,7 @@ public class GreetingClient {
         //Send the message to server that you are done sending the data
         greetEveryoneRequestStreamObserver.onCompleted();
         try {
-            latch.await(3L, TimeUnit.SECONDS);
+            latch.await(3L, TimeUnit.HOURS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -85,7 +87,7 @@ public class GreetingClient {
         CountDownLatch latch = new CountDownLatch(1);
 
         GreetServiceGrpc.GreetServiceStub asyncClient = GreetServiceGrpc.newStub(channel);
-        StreamObserver<LongGreetRequest> longGreetRequestStreamObserver = asyncClient.longGreet(new StreamObserver<>() {
+        StreamObserver<LongGreetRequest> requestObserver = asyncClient.longGreet(new StreamObserver<>() {
             @Override
             public void onNext(LongGreetResponse value) {
                 //We get a response from the server
@@ -110,18 +112,18 @@ public class GreetingClient {
 
         //Streaming message 1
         System.out.println("Sending message 1");
-        longGreetRequestStreamObserver.onNext(LongGreetRequest.newBuilder().setGreeting(greeting).build());
+        requestObserver.onNext(LongGreetRequest.newBuilder().setGreeting(greeting).build());
         //Streaming message 2
         System.out.println("Sending message 2");
-        longGreetRequestStreamObserver.onNext(LongGreetRequest.newBuilder().setGreeting(Greeting.newBuilder().setFirstName("Rajesh")).build());
+        requestObserver.onNext(LongGreetRequest.newBuilder().setGreeting(Greeting.newBuilder().setFirstName("Rajesh")).build());
         //Streaming message 3
         System.out.println("Sending message 3");
-        longGreetRequestStreamObserver.onNext(LongGreetRequest.newBuilder().setGreeting(Greeting.newBuilder().setFirstName("Phoenix")).build());
+        requestObserver.onNext(LongGreetRequest.newBuilder().setGreeting(Greeting.newBuilder().setFirstName("Phoenix")).build());
 
         //We tell server that client is done sending the data
-        longGreetRequestStreamObserver.onCompleted();
+        requestObserver.onCompleted();
         try {
-            latch.await(3, TimeUnit.SECONDS);
+            latch.await(3, TimeUnit.HOURS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -138,19 +140,45 @@ public class GreetingClient {
         //Create the greetManyTimesRequest using the greeting object
         GreetManyTimesRequest greetManyTimesRequest = GreetManyTimesRequest.newBuilder().setGreeting(greeting).build();
         //Deal with the response sent by the server. Server sends the response multiple times.
-        blockingStub.greetManyTimes(greetManyTimesRequest).forEachRemaining(greetManyTimesResponse -> {
+        Iterator<GreetManyTimesResponse> greetManyTimesResponseIterator = blockingStub.greetManyTimes(greetManyTimesRequest);
+
+        System.out.println(greetManyTimesResponseIterator.getClass());
+
+        Consumer<GreetManyTimesResponse> greetManyTimesResponseConsumer = greetManyTimesResponse -> {
             System.out.println(greetManyTimesResponse.getResult());
-        });
+        };
+
+        greetManyTimesResponseIterator.forEachRemaining(greetManyTimesResponseConsumer);
     }
 
     //Unary
     private void greet(ManagedChannel channel, Greeting greeting) {
-        GreetServiceGrpc.GreetServiceBlockingStub blockingStub = getGreetServiceBlockingStub(channel);
+        GreetServiceGrpc.GreetServiceStub greetServiceStub = GreetServiceGrpc.newStub(channel);
         //Created a protocol buffer greet request
         GreetRequest greetRequest = GreetRequest.newBuilder().setGreeting(greeting).build();
-
+        CountDownLatch latch = new CountDownLatch(1);
         //Call the RPC and get back a response
-        GreetResponse greetResponse = blockingStub.greet(greetRequest);
-        System.out.println(greetResponse.getResult());
+        greetServiceStub.greet(greetRequest, new StreamObserver<>() {
+            @Override
+            public void onNext(GreetResponse value) {
+                System.out.println("Server said onNext" + value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                latch.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("Server said I am done!");
+                latch.countDown();
+            }
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
